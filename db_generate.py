@@ -54,7 +54,8 @@ def blob_rand_generate(seed):
     return binData
 
     
-def data_delete(total_row, delete_row):
+def data_rand_delete(delete_row):
+    total_row = cur.execute("SELECT COUNT(*) FROM messages").fetchone()[0]
     delete_list = random.sample(range(1, total_row+1), delete_row)
     delete_list = [[i] for i in (delete_list)]
     
@@ -62,7 +63,11 @@ def data_delete(total_row, delete_row):
     cur.executemany(sql, delete_list)
     con.commit()
     
-
+def data_rand_modify(modify_row):
+    sql = f"UPDATE messages SET Message='!!!!!!!MODIFIED!!!!!!!' WHERE messages.rowid IN (SELECT rowid FROM messages ORDER BY RANDOM() LIMIT {modify_row})"
+    cur.execute(sql)
+    con.commit()
+    
 def read_db():
     con = sqlite3.connect("SFT-01-UTF8-WAL.sqlite")
     cursor = con.cursor()
@@ -73,18 +78,22 @@ def read_db():
 
 def main():
 
-#    SFT-01-UTF8-WAL.sqlite
+#    ***SFT-01-UTF8-WAL.sqlite
 #    db_generate('SFT-01-UTF8-WAL.sqlite', 'wal', 'UTF8', 4096, 100)
-#    SFT-01-UTF16BE-PERSIST.sqlite
+#    ***SFT-01-UTF16BE-PERSIST.sqlite
 #    db_generate('SFT-01-UTF16BE-PERSIST.sqlite', 'persist', 'UTF16BE', 1024, 100)
-#    SFT-01-UTF16LE-OFF.sqlite
+#    ***SFT-01-UTF16LE-OFF.sqlite
 #    db_generate('SFT-01-UTF16LE-OFF.sqlite', 'OFF', 'UTF16LE', 8192, 100)
-#    SFT-03-PERSIST.sqlite
-    db_generate('SFT-03-PERSIST.sqlite', 'persist', 'UTF8', 4096, 2000)
-    data_delete(2000, 100)
+#    ***SFT-03-PERSIST.sqlite
+#    db_generate('SFT-03-PERSIST.sqlite', 'persist', 'UTF8', 4096, 2000)
+#    data_rand_delete(100)
+#    data_rand_modify(100)
+#    SFT-03-WAL.sqlite
+    db_generate('SFT-03-WAL.sqlite', 'wal', 'UTF8', 4096, 2000)
+    data_rand_modify(100)
 
 if __name__ == '__main__':
-    
+
     try:
         main()
     except Exception as e:
