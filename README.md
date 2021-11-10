@@ -10,7 +10,8 @@ Hex Editor
 ## Database Schema
 To create a database that meets the conditions of the common mission, the schema is set as the messenger DB. The DB schema  is as follows.
 
-messages table
+#### messages table
 | FromID | ForwardID | Message | Media | \_time|
 | ------ | --------- | ------- | ----- | ----- |
-|  1096  |   7077    | blahblah | image.jpg | 2021-11- |
+| 1096 | 7077 | blahblah | image.jpg | 2021-11-09:21:00:06 |
+| ... | ... | ... | ... | ... | ... |
