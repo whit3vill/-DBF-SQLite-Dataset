@@ -47,7 +47,7 @@ def date_rand_generate():
 
 def blob_rand_generate(seed):
     if random.randint(0,10) < seed:
-        file_path = ["C:\\Users\\users0\\Pictures\\*.PNG"]
+        file_path = ["C:\\Users\\junus\\CASIA1\\Au\\*.jpg"]
         images = glob.glob(random.choice(file_path))
         rand_img = random.choice(images)
         with open(rand_img, 'rb') as file:
