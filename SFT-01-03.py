@@ -76,7 +76,7 @@ def data_rand_modify(db_name, modify_row):
     con.close()
 
 def main():
-    n = int(input("Select Case : "))
+    n = int(input("1. SFT-01-UTF8-WAL 2. SFT-01-UTF16BE-PERSIST 3. SFT-01-UTF16LE-OFF 4. SFT-03-PERSIST 5. SFT-03-WAL\n Select Case : "))
 
     if n == 1: # SFT-01-UTF8-WAL.sqlite
         db_generate('SFT-01-UTF8-WAL.sqlite', 'wal', 'UTF8', 4096, 100)
