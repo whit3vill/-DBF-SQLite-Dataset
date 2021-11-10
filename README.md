@@ -41,14 +41,16 @@ def data_rand_generate():
     _time = date_rand_generate() # datetime.fromtimestamp()
 
     return FromID, ForwardID, Message, Media, _time
-
+```
+```python
 def date_rand_generate():
     start = datetime(2020, 1, 1, 00, 00, 00)
     delta = datetime.now().year - 2020 + 1
     end = start + timedelta(days=365 * delta)
 
     return (start+(end-start)*random.random()).timestamp()
-
+```
+```python
 def blob_rand_generate(seed):
     if random.randint(0,10) < seed:
         file_path = ["C:\\Users\\junus\\CASIA1\\Au\\*.jpg"]
@@ -63,7 +65,7 @@ def blob_rand_generate(seed):
 ```
 
 ## NIST CFTT’s SQLite Forensics Tool Test Cases  
-### SFT-01: SQLite header parsing  
+### SFT-01: SQLite header parsing - encoding_type: UTF8, journal_mode: WAL 
 ```python
 def db_generate(db_name, journal_mode, encoding, page_size, rows):
     global top_1000_word_list
@@ -87,6 +89,146 @@ def db_generate(db_name, journal_mode, encoding, page_size, rows):
     cur.executemany(sql, data)
     con.commit()
     con.close()
-    
+```
+```python   
 db_generate('SFT-01-UTF8-WAL.sqlite', 'wal', 'UTF8', 4096, 100)
 ```
+
+
+In SFT-01-UTF8-WAL.sqlite, roll back journal is set to WAL. Since the commit is normally completed, sqlite-wal file is not created. To create -wal, we need to create an additional query and raise an error. In order for a query before committing to be saved in -wal, an error must be generated before committing.
+
+
+### SFT-01: SQLite header parsing - encoding_type: UTF16be, journal_mode: persist
+```python   
+db_generate('SFT-01-UTF16BE-PERSIST.sqlite', 'persist', 'UTF16BE', 1024, 100)
+```
+
+### SFT-01: SQLite header parsing - encoding_type: UTF16le, journal_mode: off
+```python   
+db_generate('SFT-01-UTF16LE-OFF.sqlite', 'OFF', 'UTF16LE', 8192, 100)
+```
+
+### SFT-03: SQLite Recoverable Rows - journal_mode: persist
+```python   
+def data_rand_delete(db_name, delete_row):
+    con = sqlite3.connect(db_name, check_same_thread=False)
+    cur = con.cursor()    
+    total_row = cur.execute("SELECT COUNT(*) FROM messages").fetchone()[0]
+    delete_list = random.sample(range(1, total_row), delete_row)
+    delete_list = [[i] for i in (delete_list)]
+    
+    sql = "DELETE FROM messages WHERE rowid=?"
+    cur.executemany(sql, delete_list)
+    con.commit()
+    con.close()
+```
+```python   
+def data_rand_modify(db_name, modify_row):
+    con = sqlite3.connect(db_name, check_same_thread=False)
+    cur = con.cursor()    
+    sql = f"UPDATE messages SET Message='!!!!!!!MODIFIED!!!!!!!' WHERE messages.rowid IN (SELECT rowid FROM messages ORDER BY RANDOM() LIMIT {modify_row})"
+    cur.execute(sql)
+    con.commit()
+    con.close()
+```
+```python   
+db_generate('SFT-03-PERSIST.sqlite', 'persist', 'UTF8', 4096, 2000)
+data_rand_delete('SFT-03-PERSIST.sqlite', 100)
+data_rand_modify('SFT-03-PERSIST.sqlite', 100)
+```
+data_rand_delete() : Deletes the specified number of rows from all rows.  
+data_rand_modify() : Modifies the message field of the specified number of rows in all rows to “!!!!!!!MODIFIED!!!!!!!”.  
+
+### SFT-03: SQLite Recoverable Rows - journal_mode: wal
+```python   
+db_generate('SFT-03-WAL.sqlite', 'wal', 'UTF8', 4096, 2000)
+data_rand_modify('SFT-03-WAL.sqlite', 100)
+data_rand_delete('SFT-03-WAL.sqlite', 100)
+con = sqlite3.connect('SFT-03-WAL.sqlite', check_same_thread=False)
+cur = con.cursor()
+cur.execute("SELECT * FROM messages")
+sys.exit("Error!!!")
+```
+
+According to the manual of [sqlite3](https://docs.python.org/2/library/sqlite3.html#controlling-transactions) modules used for automation scripts, the sqlite3 opens transactions implicitly before a Data Modification Language statement, and commits transactions implicity befor a non-DML, non-query statement. Therefore, a separate begin-end operation is not used. To implement a situation that meets the condition, an error occurred after executing the delete function. At this time, there is no uncommitted query, so -wal file is empty.
+
+### SFT-05 : Schema Reporting
+![image](https://user-images.githubusercontent.com/31686076/141146968-202e52b6-45c1-49c1-b8aa-0ab34c496fdd.png)  
+As with the data generation above, the data of the SFT-05 item was also randomly generated. 
+User ID : a 4-digit number between 1000 and 10000 was given  
+UserName : randomly selected word from the most used 1000 words(might look weird in this case).  
+Phone : 010-0000-0000 type data is randomly generated.  
+ProfileImage : same concept as the media field of the messages table.  
+Sex : 0: Male, 1: Female  
+UpdateTime : the time when the user profile was updated. 
+
+
+## Additional Mission
+### DB Files for Understanding 'auto_vacuum' PRAGMA
+```python   
+def db_generate(db_name, vacuum_mode, rows):
+    data = []
+    sample = ('111111111111111111111111', '111111111111111111111111', '111111111111111111111111', '111111111111111111111111', '111111111111111111111111', '111111111111111111111111')
+    
+    for i in range(0,rows):
+        data.append(sample)
+        
+    if os.path.exists(db_name):
+        os.remove(db_name)
+
+    con = sqlite3.connect(db_name, check_same_thread=False)
+    cur = con.cursor()
+    cur.execute(f'PRAGMA auto_vacuum={vacuum_mode}')
+    cur.execute("PRAGMA journal_mode=WAL;")
+    cur.execute("CREATE TABLE test (AA TEXT, BB TEXT, CC TEXT, DD TEXT, EE TEXT, FF TEXT)")
+    sql = "INSERT INTO test (AA, BB, CC, DD, EE, FF) VALUES (?, ?, ?, ?, ?, ?)"
+    cur.executemany(sql, data)
+    con.commit()
+    con.close()
+```
+```python   
+def vacuum(db_name):
+    con = sqlite3.connect(db_name, check_same_thread=False)
+    cur = con.cursor()
+    cur.execute("VACUUM")
+    con.commit()
+    con.close()
+```
+```python   
+def main():
+    n = int(input("1. SAMPLE Generate 2. VACUUM NONE 3. VACUUM FULL 4. VACUUM INCR\n Select Case :"))
+
+    if n == 1: # KU-DBF-AM-02-AV-SAMPLE.sqlite
+        db_generate('KU-DBF-AM-02-AV-SAMPLE.sqlite', 0, 2000)
+        
+    elif n == 2: # KU-DBF-AM-02-AV-NONE.sqlite
+        db_generate('KU-DBF-AM-02-AV-NONE.sqlite', '0', 2000)
+        for i in range(0, 10):
+            data_rand_delete('KU-DBF-AM-02-AV-NONE.sqlite', 100)
+        
+    elif n == 3: # KU-DBF-AM-02-AV-FULL.sqlite
+        db_generate('KU-DBF-AM-02-AV-FULL.sqlite', '1', 2000)
+        for i in range(0, 10):
+            data_rand_delete('KU-DBF-AM-02-AV-FULL.sqlite', 100)
+        vacuum('KU-DBF-AM-02-AV-FULL.sqlite')
+
+    elif n == 4: # KU-DBF-AM-02-AV-INCR.sqlite
+        db_generate('KU-DBF-AM-02-AV-INCR.sqlite', '2', 2000)
+        for i in range(0, 10):
+            data_rand_delete('KU-DBF-AM-02-AV-INCR.sqlite', 100)
+        vacuum('KU-DBF-AM-02-AV-INCR.sqlite')
+
+if __name__ == '__main__':
+    main()
+```
+
+Unlike the randomly generated common mission dataset, the dataset was created with fixed values. This is because it is necessary to quantitatively measure the change in the DB file size as the data changes.  
+
+
+![image](https://user-images.githubusercontent.com/31686076/141149049-b2c699be-fe07-4b89-b785-79b72498a55f.png)
+
+_KU-DBF-AM-02-AV-SAMPLE.sqlite_ is a DB created with fixed values (6 columns and 2000 rows for '111111111111111111111111' in the data).   
+_KU-DBF-AM-02-AV-NONE.sqlite_ is the DB in which the vacuum mode is deactivated and 1000 rows are deleted.   
+_KU-DBF-AM-02-AV-FULL.sqlite_ is a DB with 1000 rows deleted in Full Vacuum mode.   
+_KU-DBF-AM-02-AV-INCR.sqlite_ is a DB with 1000 rows deleted in Incremental Vacuum mode.   
+As shown in the figure above, it can be seen that the size of the DB file is reduced when the vacuum mode is activated.
