@@ -1,10 +1,10 @@
 import sqlite3
-import os
+import os, sys
 import glob, random
 from datetime import datetime, timedelta
 
 
-def db_generate(db_name, journal_mode, encoding, page_size, rows):
+def db_generate(db_name, journal_mode, encoding, page_size, rows, sys_exit):
     global con, cur
     data = []
     for i in range(0,rows):
@@ -21,6 +21,8 @@ def db_generate(db_name, journal_mode, encoding, page_size, rows):
     cur.execute("CREATE TABLE messages (FromID INT, ForwardID INT, Message TEXT, Media BLOB, _time REAL)")
     sql = "INSERT INTO messages (FromID, ForwardID, Message, Media, _time) VALUES (?, ?, ?, ?, ?)"
     cur.executemany(sql, data)
+    if (sys_exit):
+        sys.exit("Error!!!")
     con.commit()
 
 def data_rand_generate():
@@ -52,7 +54,6 @@ def blob_rand_generate(seed):
         binData=''
         
     return binData
-
     
 def data_rand_delete(delete_row):
     total_row = cur.execute("SELECT COUNT(*) FROM messages").fetchone()[0]
@@ -77,26 +78,26 @@ def read_db():
 
 
 def main():
-
 #    ***SFT-01-UTF8-WAL.sqlite
-#    db_generate('SFT-01-UTF8-WAL.sqlite', 'wal', 'UTF8', 4096, 100)
+#    db_generate('SFT-01-UTF8-WAL.sqlite', 'wal', 'UTF8', 4096, 100, 1)
 #    ***SFT-01-UTF16BE-PERSIST.sqlite
-#    db_generate('SFT-01-UTF16BE-PERSIST.sqlite', 'persist', 'UTF16BE', 1024, 100)
+#    db_generate('SFT-01-UTF16BE-PERSIST.sqlite', 'persist', 'UTF16BE', 1024, 100, 0)
 #    ***SFT-01-UTF16LE-OFF.sqlite
-#    db_generate('SFT-01-UTF16LE-OFF.sqlite', 'OFF', 'UTF16LE', 8192, 100)
+#    db_generate('SFT-01-UTF16LE-OFF.sqlite', 'OFF', 'UTF16LE', 8192, 100, 0)
 #    ***SFT-03-PERSIST.sqlite
-#    db_generate('SFT-03-PERSIST.sqlite', 'persist', 'UTF8', 4096, 2000)
+#    db_generate('SFT-03-PERSIST.sqlite', 'persist', 'UTF8', 4096, 2000, 0)
 #    data_rand_delete(100)
 #    data_rand_modify(100)
 #    SFT-03-WAL.sqlite
-    db_generate('SFT-03-WAL.sqlite', 'wal', 'UTF8', 4096, 2000)
+    db_generate('SFT-03-WAL.sqlite', 'wal', 'UTF8', 4096, 500, 0)
     data_rand_modify(100)
+    data_rand_delete(100)
+    con.commit()
+    sys.exit("ER")
 
 if __name__ == '__main__':
-
     try:
         main()
+        con.close()
     except Exception as e:
         print (e)
-    finally:
-        con.close()
