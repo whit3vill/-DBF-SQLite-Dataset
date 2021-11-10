@@ -95,7 +95,7 @@ db_generate('SFT-01-UTF8-WAL.sqlite', 'wal', 'UTF8', 4096, 100)
 ```
 
 
-In SFT-01-UTF8-WAL.sqlite, roll back journal is set to WAL. Since the commit is normally completed, sqlite-wal file is not created. To create -wal, we need to create an additional query and raise an error. In order for a query before committing to be saved in -wal, an error must be generated before committing.
+In SFT-01-UTF8-WAL.sqlite, roll back journal is set to WAL. Since the commit is normally completed, sqlite-wal file is not created. To create -wal, we need to create an additional query and raise an error. In this case, -wal file will by empty. In order for a query before committing to be saved in -wal, an error must be generated before committing. The attached -wal file was created using this method, and in this case, the db file will be empty because it does not receive any commits.
 
 
 ### SFT-01: SQLite header parsing - encoding_type: UTF16be, journal_mode: persist
